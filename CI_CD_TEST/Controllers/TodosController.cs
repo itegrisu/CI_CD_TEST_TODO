@@ -36,6 +36,24 @@ namespace CI_CD_TEST.Controllers
             _context.Todo.Add(todo);
             _context.SaveChanges();
             return CreatedAtAction(nameof(GetTodos), new { id = todo.Id }, todo);
-        }            
+        }
+
+        [HttpPut]
+        public ActionResult<Todo> UpdateTodo([FromBody] Todo updatedTodo)
+        {
+            var updatedEntity = _context.Todo.FirstOrDefault(x => x.Id == updatedTodo.Id);
+            if (updatedEntity == null)
+            {
+                return NotFound($"Todo with ID {updatedTodo.Id} not found.");
+            }
+
+            updatedEntity.Name = updatedTodo.Name;
+            updatedEntity.IsComplete = updatedTodo.IsComplete;
+
+            _context.Todo.Update(updatedEntity);
+            _context.SaveChanges();
+
+            return Ok(updatedEntity);
+        }
     }
 }
