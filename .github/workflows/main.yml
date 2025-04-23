@@ -28,17 +28,50 @@ jobs:
         run: dotnet test --no-build --configuration Release
 
   build-and-push:
-    name: Build & Push Image
+    name: Build & Push Docker Image
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Login to Docker Hub
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0     
+
+      - name: Setup GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.14
+        with:
+          versionSpec: '5.x' 
+
+      - name: Determine SemVer
+        id: gitver
+        run: |
+          echo "IMAGE_TAG=${{ steps.setup-gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
+
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}  
+
+      - name: Build & Tag image
+        run: |
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo  
+          TAG=${{ env.IMAGE_TAG }}                        
+          docker build -t $IMAGE:$TAG -t $IMAGE:latest ./CI_CD_TEST
+
+      - name: Push both tags
+        run: |
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo
+          TAG=${{ env.IMAGE_TAG }}
+          docker push $IMAGE:$TAG      
+          docker push $IMAGE:latest   
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ env.IMAGE_TAG }}
+          git push origin ${{ env.IMAGE_TAG }}
 
       - name: Build & Push Image
         run: |
