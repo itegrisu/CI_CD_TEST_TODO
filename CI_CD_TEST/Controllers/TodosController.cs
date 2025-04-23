@@ -23,6 +23,17 @@ namespace CI_CD_TEST.Controllers
             return Ok(_todos);
         }
 
+        [HttpGet("{id}")]
+        public ActionResult<Todo> GetTodoById(int id)
+        {
+            var todo = _todos.FirstOrDefault(t => t.Id == id);
+            if (todo == null)
+            {
+                return NotFound($"Todo with ID {id} not found.");
+            }
+            return Ok(todo);
+        }
+
         [HttpPost]
         public ActionResult<Todo> CreateTodo([FromBody] Todo newTodo)
         {
@@ -63,7 +74,5 @@ namespace CI_CD_TEST.Controllers
             _todos.Remove(todo);
             return NoContent();
         }
-
-
     }
 }
