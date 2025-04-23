@@ -11,8 +11,7 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v3
@@ -29,21 +28,28 @@ jobs:
         run: dotnet test --no-build --configuration Release
 
   build-and-push:
-    name: Build & Push Docker Image
+    name: Build & Push Image
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
+      - uses: actions/checkout@v3
+
+      - name: List repository structure
+        run: ls -R
+
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      - name: Build & Push Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest ./CI_CD_TEST/
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
+
   deploy:
-    name: Deploy to Remote Server
+    name: Deploy via SSH & Compose
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
@@ -53,11 +59,13 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key.pem
           chmod 600 ~/.ssh/deploy_key.pem
 
-      - name: Deploy via SSH
+      - name: Deploy via SSH & Compose
         run: |
           ssh -i ~/.ssh/deploy_key.pem \
             -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "cd /home/ubuntu/CI_CD_TEST_TODO/CI_CD_TEST && \
-             docker-compose pull && \
-             docker-compose up -d"
+             docker-compose down --volumes && \
+             docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest || true && \
+             docker-compose pull api && \
+             docker-compose up -d --force-recreate api"
