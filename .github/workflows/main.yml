@@ -28,7 +28,7 @@ jobs:
         run: dotnet test --no-build --configuration Release
 
   build-and-push:
-    name: Build & Push Docker Image
+    name: Build & Push Docker Image 
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
@@ -37,26 +37,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup GitVersion (execute)
-        id: gitver
-        uses: gittools/actions/gitversion/execute@v0.9.14
-        with:
-          versionSpec: '5.x'
-
-      - name: Debug GitVersion outputs
+      - name: Set IMAGE_TAG = v{run_number}
         run: |
-          echo "fullSemVer = '${{ steps.gitver.outputs.fullSemVer }}'"
-          echo "semVer     = '${{ steps.gitver.outputs.semVer }}'"
-          echo "majorMinor = '${{ steps.gitver.outputs.majorMinor }}'"
+          echo "IMAGE_TAG=v${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Set IMAGE_TAG (fallback to SHA if empty)
-        run: |
-          TAG="${{ steps.gitver.outputs.fullSemVer }}"
-          if [ -z "$TAG" ]; then
-            echo "!!! GitVersion produced empty tag, falling back to SHA8"
-            TAG="${GITHUB_SHA::8}"
-          fi
-          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+      - name: Log the tag for debug
+        run: echo "Will build with tag ${{ env.IMAGE_TAG }} and latest"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -64,19 +50,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build & Tag Image
-        run: |
-          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo
-          TAG=${{ env.IMAGE_TAG }}
-          echo "Building image $IMAGE:$TAG and $IMAGE:latest"
-          docker build -t $IMAGE:$TAG -t $IMAGE:latest ./CI_CD_TEST
-
-      - name: Push both tags
-        run: |
-          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo
-          TAG=${{ env.IMAGE_TAG }}
-          docker push $IMAGE:$TAG
-          docker push $IMAGE:latest
+      - name: Build & push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./CI_CD_TEST 
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
+          
+      - name: Output final image list
+        run: docker images ${{ secrets.DOCKERHUB_USERNAME }}/todo
           
   deploy:
     name: Deploy via SSH & Compose
