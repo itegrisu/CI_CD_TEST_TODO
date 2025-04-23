@@ -7,41 +7,39 @@ namespace CI_CD_TEST.Controllers
     [ApiController]
     public class TodosController : ControllerBase
     {
-        private readonly TodoContext _context;
-
-        public TodosController(TodoContext context)
+        private static List<Todo> _todos = new List<Todo>
         {
-            _context = context;
-        }
+            new Todo { Id = 1, Name = "Sample Todo 1", IsComplete = false },
+            new Todo { Id = 2, Name = "Sample Todo 2", IsComplete = true }
+        };
 
         [HttpGet]
         public ActionResult<IEnumerable<Todo>> GetTodos()
         {
-          var todos = _context.Todo.ToList();
-            if (todos == null || !todos.Any())
+            if (!_todos.Any())
             {
                 return NotFound("No todos found.");
             }
-            return Ok(todos);
+            return Ok(_todos);
         }
 
         [HttpPost]
         public ActionResult<Todo> CreateTodo([FromBody] Todo newTodo)
         {
-           Todo todo = new()
-           {
-               Name = newTodo.Name,
-               IsComplete = newTodo.IsComplete
-           };
-            _context.Todo.Add(todo);
-            _context.SaveChanges();
+            Todo todo = new()
+            {
+                Id = _todos.Any() ? _todos.Max(t => t.Id) + 1 : 1,
+                Name = newTodo.Name,
+                IsComplete = newTodo.IsComplete
+            };
+            _todos.Add(todo);
             return CreatedAtAction(nameof(GetTodos), new { id = todo.Id }, todo);
         }
 
         [HttpPut]
         public ActionResult<Todo> UpdateTodo([FromBody] Todo updatedTodo)
         {
-            var updatedEntity = _context.Todo.FirstOrDefault(x => x.Id == updatedTodo.Id);
+            var updatedEntity = _todos.FirstOrDefault(x => x.Id == updatedTodo.Id);
             if (updatedEntity == null)
             {
                 return NotFound($"Todo with ID {updatedTodo.Id} not found.");
@@ -49,9 +47,6 @@ namespace CI_CD_TEST.Controllers
 
             updatedEntity.Name = updatedTodo.Name;
             updatedEntity.IsComplete = updatedTodo.IsComplete;
-
-            _context.Todo.Update(updatedEntity);
-            _context.SaveChanges();
 
             return Ok(updatedEntity);
         }
