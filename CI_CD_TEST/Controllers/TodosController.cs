@@ -74,5 +74,13 @@ namespace CI_CD_TEST.Controllers
             _todos.Remove(todo);
             return NoContent();
         }
+
+        [HttpGet("ping")]
+        public ActionResult<string> Ping()
+        {
+            return Ok("Pong");
+        }
+
+
     }
 }
