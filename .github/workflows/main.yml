@@ -40,12 +40,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build image
+      - name: Build & Push Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest .
-
-      - name: Push image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest ./CI_CD_TEST/CI_CD_TEST
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
 
   deploy:
     name: Deploy via SSH & Compose
