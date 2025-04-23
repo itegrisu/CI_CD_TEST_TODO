@@ -50,5 +50,20 @@ namespace CI_CD_TEST.Controllers
 
             return Ok(updatedEntity);
         }
+
+        [HttpDelete("{id}")]
+        public ActionResult DeleteTodo(int id)
+        {
+            var todo = _todos.FirstOrDefault(t => t.Id == id);
+            if (todo == null)
+            {
+                return NotFound($"Todo with ID {id} not found.");
+            }
+
+            _todos.Remove(todo);
+            return NoContent();
+        }
+
+
     }
 }
