@@ -1,4 +1,4 @@
-name: CI_TODO_TEST
+name: CI/CD Pipeline
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
 
 jobs:
   build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,3 +27,38 @@ jobs:
 
       - name: Run tests
         run: dotnet test --no-build --configuration Release
+
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+  deploy:
+    name: Deploy to Remote Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key.pem
+          chmod 600 ~/.ssh/deploy_key.pem
+
+      - name: Deploy via Docker Compose
+        run: |
+          ssh -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+              cd /home/ubuntu/CI_CD_TEST_TODO/CI_CD_TEST
+              docker-compose pull
+              docker-compose up -d
+            EOF
