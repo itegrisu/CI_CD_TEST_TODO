@@ -34,6 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: List repository structure
+        run: ls -R
+
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -42,7 +45,7 @@ jobs:
 
       - name: Build & Push Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest ./CI_CD_TEST/CI_CD_TEST
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest ./CI_CD_TEST/
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
 
   deploy:
