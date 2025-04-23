@@ -35,49 +35,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0     
+          fetch-depth: 0
 
       - name: Setup GitVersion
+        id: gitver                 
         uses: gittools/actions/gitversion/setup@v0.9.14
         with:
-          versionSpec: '5.x' 
+          versionSpec: '5.x'
 
       - name: Determine SemVer
-        id: gitver
         run: |
-          echo "IMAGE_TAG=${{ steps.setup-gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ steps.gitver.outputs.fullSemVer }}" >> $GITHUB_ENV
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}  
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}  
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build & Tag image
+      - name: Build & Tag Image
         run: |
-          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo  
-          TAG=${{ env.IMAGE_TAG }}                        
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo
+          TAG=${{ env.IMAGE_TAG }}
           docker build -t $IMAGE:$TAG -t $IMAGE:latest ./CI_CD_TEST
 
       - name: Push both tags
         run: |
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/todo
           TAG=${{ env.IMAGE_TAG }}
-          docker push $IMAGE:$TAG      
-          docker push $IMAGE:latest   
-
-      - name: Create Git tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ env.IMAGE_TAG }}
-          git push origin ${{ env.IMAGE_TAG }}
-
-      - name: Build & Push Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest ./CI_CD_TEST/
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo:latest
-
+          docker push $IMAGE:$TAG
+          docker push $IMAGE:latest
+          
   deploy:
     name: Deploy via SSH & Compose
     needs: build-and-push
